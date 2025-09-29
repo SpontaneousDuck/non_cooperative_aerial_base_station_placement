@@ -10,17 +10,17 @@ def main():
     # Create optimizer
     optimizer = UAVPlacementOptimizer()
     
-    # Run optimization with custom parameters
+    # Run optimization with custom parameters (mirrors experiment_2007)
     print("Running optimization...")
     results = optimizer.optimize(
-        num_base_stations=3,
-        num_mobile_users=30,
+        num_base_stations=7,
+        num_mobile_users=200,
         region_size=7.0,
-        bs_powers_dbm=[7, 9, 12],  # Different power levels
+        bs_powers_dbm=[7, 9, 9, 9, 10, 10, 12],  # Power levels from experiment_2007
         num_iterations=50,
         optimization_method='stochastic',
         utility_function='sigmoid',
-        random_seed=42  # For reproducibility
+        random_seed=0  # For reproducibility (matches rng(0) in MATLAB)
     )
     
     # Print results
@@ -48,8 +48,8 @@ def main():
     # Quick comparison with k-means
     print("\nComparing with k-means optimization...")
     results_kmeans = UAVPlacementOptimizer.quick_optimize(
-        num_base_stations=3,
-        num_mobile_users=30,
+        num_base_stations=7,
+        num_mobile_users=200,
         region_size=7.0,
         num_iterations=50
     )

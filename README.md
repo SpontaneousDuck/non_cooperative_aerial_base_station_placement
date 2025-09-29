@@ -78,6 +78,7 @@ Both implementations provide the same core algorithms for non-cooperative optimi
 
 - **Multiple Optimization Methods**: Stochastic gradient descent and k-means-based approaches
 - **Flexible Utility Functions**: Sigmoid and leaky ReLU utility functions  
+- **User Distribution Options**: Random or evenly-spaced grid placement of mobile users
 - **Realistic Channel Models**: Free space propagation with configurable parameters
 - **Visualization**: Built-in plotting and result visualization
 
@@ -95,10 +96,18 @@ Both implementations provide the same core algorithms for non-cooperative optimi
 ```python
 from uav_placement import UAVPlacementOptimizer
 
-# Simple optimization
+# Simple optimization with random user placement
 results = UAVPlacementOptimizer.quick_optimize(
     num_base_stations=3,
     num_mobile_users=50
+)
+
+# Even distribution of users (must be perfect square)
+optimizer = UAVPlacementOptimizer()
+results_even = optimizer.optimize(
+    num_base_stations=3,
+    num_mobile_users=100,  # 10x10 grid
+    user_distribution='even'
 )
 
 print(f"Final utility: {results['results']['final_utility']}")

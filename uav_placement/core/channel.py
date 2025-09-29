@@ -1,8 +1,6 @@
 """Channel models for UAV placement optimization."""
 
 import numpy as np
-from typing import Union, Tuple
-from ..utils import dbm_to_watt
 
 
 class Channel:
@@ -103,9 +101,19 @@ class Channel:
         Returns:
             Channel object with realistic parameters
         """
-        # Use a simpler gain constant for better numerical stability
-        # This represents a normalized gain that gives reasonable gradients
-        gain_constant = 1.0  # Simplified for better numerical behavior
+        # Compute realistic gain constant based on RF parameters
+        # Following MATLAB experiment_2007 calculation:
+        # f=2390e6; lambda = 3e8/f/1000; d = 1;  % lambda and d in km
+        # gainConstant_dB = 6 + 0 - 20*log10( d/lambda) - 20*log10(4*pi) % gain @1km in dB
+        
+        lambda_km = 3e8 / frequency_hz / 1000  # wavelength in km
+        d_km = 1.0  # reference distance in km
+        
+        gain_constant_db = (bs_antenna_gain_db + mu_antenna_gain_db - 
+                           20 * np.log10(d_km / lambda_km) - 
+                           20 * np.log10(4 * np.pi))
+        
+        gain_constant = 10 ** (gain_constant_db / 10)
         
         return cls(model='freeSpace', gain_constant=gain_constant)
     

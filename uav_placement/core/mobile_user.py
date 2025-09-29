@@ -1,7 +1,7 @@
 """Mobile User implementation for UAV placement optimization."""
 
 import numpy as np
-from typing import Union, List, Tuple, Optional
+from typing import List
 from ..utils import sigmoid, sigmoid_derivative, dbm_to_watt, watt_to_dbm, log_sum_exp
 
 
@@ -142,8 +142,8 @@ class MobileUser:
                 exp_vals = np.exp(rx_powers_dbm - max_dbm)
                 sum_exp = np.sum(exp_vals)
                 power_grads = exp_vals / sum_exp
-                # Convert gradient from dBm to Watt space
-                power_grads = power_grads * (10 * np.log(10) / 10) / rx_powers
+                # Convert gradient from dBm to Watt space: dP_dbm/dP = 10 / (P * ln(10))
+                power_grads = power_grads * 10 / rx_powers / np.log(10)
             else:
                 max_log = np.max(np.log(rx_powers + 1e-12))
                 exp_vals = np.exp(np.log(rx_powers + 1e-12) - max_log)
@@ -174,7 +174,8 @@ class MobileUser:
             x = 3 * (2 * power_dbm - start_dbm - stop_dbm) / (stop_dbm - start_dbm)
             # Chain rule: d/dP = d/dP_dbm * dP_dbm/dP
             dbm_grad = sigmoid_derivative(x) * 6 / (stop_dbm - start_dbm)
-            return dbm_grad * (10 * np.log(10) / 10) / power
+            # Correct conversion: dP_dbm/dP = 10 / (P * ln(10))
+            return dbm_grad * 10 / power / np.log(10)
         else:
             x = 3 * (2 * power - self.power_start - self.power_stop) / (self.power_stop - self.power_start)
             return sigmoid_derivative(x) * 6 / (self.power_stop - self.power_start)

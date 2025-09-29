@@ -1,12 +1,11 @@
 """Aerial Base Station implementations for UAV placement optimization."""
 
 import numpy as np
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 if TYPE_CHECKING:
     from .channel import Channel
-    from .mobile_user import MobileUser
 
 
 class AerialBaseStation(ABC):
@@ -51,6 +50,19 @@ class AerialBaseStation(ABC):
             mu_positions: Positions of mobile users (3 x num_MU)
         """
         pass
+
+    def compute_position_gradient(
+        self,
+        channel: 'Channel',
+        utility_gradients: np.ndarray,
+        mu_positions: np.ndarray
+    ) -> np.ndarray:
+        """
+        Compute the gradient of utility w.r.t. this BS position (dU/dx, dU/dy, dU/dz).
+
+        Default implementation raises to indicate subclasses should implement when applicable.
+        """
+        raise NotImplementedError("compute_position_gradient must be implemented by subclasses that use gradients")
     
     def clone(self) -> 'AerialBaseStation':
         """Create a copy of this base station."""
@@ -146,20 +158,8 @@ class StochasticAerialBaseStation(AerialBaseStation):
             raise ValueError("Number of utility gradients must match number of MU positions")
         
         # Compute position gradient
-        stochastic_position_gradient = np.zeros(3)
-        
-        for i in range(num_mu):
-            # Gradient of received power w.r.t. BS position
-            power_gradient = self.power * channel.gain_gradient(
-                self.position, mu_positions[:, i]
-            )
-            
-            # Chain rule: utility gradient * power gradient
-            stochastic_position_gradient += power_gradient * utility_gradients[i]
-        
-        # Average over mini-batch
-        stochastic_position_gradient /= num_mu
-        
+        stochastic_position_gradient = self.compute_position_gradient(channel, utility_gradients, mu_positions)
+
         if self.debug:
             step = self.step_size * stochastic_position_gradient
             print(f"Position gradient: {stochastic_position_gradient}")
@@ -183,6 +183,27 @@ class StochasticAerialBaseStation(AerialBaseStation):
             step_size=self.step_size,
             debug=self.debug
         )
+
+    def compute_position_gradient(
+        self,
+        channel: 'Channel',
+        utility_gradients: np.ndarray,
+        mu_positions: np.ndarray
+    ) -> np.ndarray:
+        """Compute the stochastic position gradient used for updates (averaged over mini-batch)."""
+        num_mu = mu_positions.shape[1]
+        if len(utility_gradients) != num_mu:
+            raise ValueError("Number of utility gradients must match number of MU positions")
+
+        grad = np.zeros(3)
+        for i in range(num_mu):
+            power_gradient = self.power * channel.gain_gradient(self.position, mu_positions[:, i])
+            grad += power_gradient * utility_gradients[i]
+        grad /= num_mu
+
+        if self.fixed_height:
+            grad[2] = 0
+        return grad
 
 
 class KmeansAerialBaseStation(AerialBaseStation):
@@ -211,40 +232,35 @@ class KmeansAerialBaseStation(AerialBaseStation):
     def update_position(
         self, 
         channel: 'Channel', 
-        utility_gradients: np.ndarray, 
+        assigned_mu_indices: np.ndarray, 
         mu_positions: np.ndarray
     ) -> None:
         """
-        Update position toward centroid of served mobile users.
+        Update position toward centroid of assigned mobile users.
         
-        For k-means, we move toward the centroid of all mobile users,
-        weighted by their utility gradients (serving as assignment weights).
+        For k-means, we move to the centroid of the MUs assigned to this BS.
         
         Args:
             channel: Channel model (not used in k-means)
-            utility_gradients: Utility gradients from mobile users (num_MU,)
-            mu_positions: Mobile user positions (3, num_MU)
+            assigned_mu_indices: Indices of MUs assigned to this BS
+            mu_positions: All MU positions in mini-batch (3, num_MU)
         """
-        num_mu = mu_positions.shape[1]
-        if len(utility_gradients) != num_mu:
-            raise ValueError("Number of utility gradients must match number of MU positions")
-        
-        if num_mu == 0:
+        if len(assigned_mu_indices) == 0:
+            # No MUs assigned to this BS, don't move
             return
         
-        # Compute weighted centroid
-        weights = np.abs(utility_gradients)  # Use absolute values as weights
-        total_weight = np.sum(weights)
+        # Select positions of assigned MUs
+        assigned_positions = mu_positions[:, assigned_mu_indices]
         
-        if total_weight > 0:
-            weighted_centroid = np.sum(mu_positions * weights[np.newaxis, :], axis=1) / total_weight
-            
-            # Apply height constraint
-            if self.fixed_height:
-                weighted_centroid[2] = self.position[2]
-            
-            # Move toward centroid (could add learning rate here)
-            self.position = weighted_centroid
+        # Compute centroid
+        centroid = np.mean(assigned_positions, axis=1)
+        
+        # Apply height constraint
+        if self.fixed_height:
+            centroid[2] = self.position[2]
+        
+        # Move to centroid
+        self.position = centroid
     
     def clone(self) -> 'KmeansAerialBaseStation':
         """Create a copy of this base station."""
@@ -253,3 +269,14 @@ class KmeansAerialBaseStation(AerialBaseStation):
             power=self.power,
             fixed_height=self.fixed_height
         )
+
+    def compute_position_gradient(
+        self,
+        channel: 'Channel',
+        utility_gradients: np.ndarray,
+        mu_positions: np.ndarray
+    ) -> np.ndarray:
+        """
+        K-means updates are not gradient-based; return zeros so logging remains consistent.
+        """
+        return np.zeros(3)

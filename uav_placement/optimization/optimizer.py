@@ -24,6 +24,35 @@ class UAVPlacementOptimizer:
         self.results = None
         self.simulator = None
     
+    def _create_even_grid(self, num_users: int, region_size: float, height: float) -> np.ndarray:
+        """
+        Create an even grid of positions for mobile users.
+        
+        Args:
+            num_users: Number of users (must be a perfect square)
+            region_size: Size of the square region (km)
+            height: Height of users (z-coordinate)
+            
+        Returns:
+            Array of shape (3, num_users) with evenly spaced positions
+        """
+        grid_size = int(np.sqrt(num_users))
+        
+        # Create evenly spaced coordinates
+        x = np.linspace(0, region_size, grid_size)
+        y = np.linspace(0, region_size, grid_size)
+        
+        # Create meshgrid
+        xx, yy = np.meshgrid(x, y)
+        
+        # Flatten and create position array
+        positions = np.zeros((3, num_users))
+        positions[0, :] = xx.flatten()
+        positions[1, :] = yy.flatten()
+        positions[2, :] = height
+        
+        return positions
+    
     def optimize(
         self,
         num_base_stations: int = 3,
@@ -39,7 +68,8 @@ class UAVPlacementOptimizer:
         mini_batch_size: Optional[int] = None,
         step_size: float = 0.01,
         frequency_ghz: float = 2.39,
-        random_seed: Optional[int] = None
+        random_seed: Optional[int] = None,
+        user_distribution: str = 'random'
     ) -> Dict:
         """
         Run UAV placement optimization.
@@ -59,6 +89,7 @@ class UAVPlacementOptimizer:
             step_size: Step size for gradient descent
             frequency_ghz: Carrier frequency in GHz
             random_seed: Random seed for reproducibility
+            user_distribution: 'random' or 'even' - How to distribute mobile users
             
         Returns:
             Dictionary with optimization results and metrics
@@ -73,6 +104,19 @@ class UAVPlacementOptimizer:
         if len(bs_powers_dbm) != num_base_stations:
             raise ValueError("Length of bs_powers_dbm must match num_base_stations")
         
+        # Validate user distribution
+        if user_distribution not in ['random', 'even']:
+            raise ValueError(f"user_distribution must be 'random' or 'even', got '{user_distribution}'")
+        
+        # For even distribution, check that num_mobile_users is a perfect square
+        if user_distribution == 'even':
+            grid_size = int(np.sqrt(num_mobile_users))
+            if grid_size * grid_size != num_mobile_users:
+                raise ValueError(
+                    f"For even distribution, num_mobile_users must be a perfect square. "
+                    f"Got {num_mobile_users}, nearest perfect squares are {grid_size**2} and {(grid_size+1)**2}"
+                )
+        
         # Convert power thresholds to Watts
         power_start = dbm_to_watt(power_threshold_dbm)
         power_stop = dbm_to_watt(power_upper_dbm)
@@ -85,9 +129,14 @@ class UAVPlacementOptimizer:
             power_stop=power_stop,
             use_dbm=True
         )
-        mobile_users = MobileUser.clone_at_random_positions(
-            template_mu, num_mobile_users, region_size, same_height=True, two_d=True
-        )
+        
+        if user_distribution == 'random':
+            mobile_users = MobileUser.clone_at_random_positions(
+                template_mu, num_mobile_users, region_size, same_height=True, two_d=True
+            )
+        else:  # even distribution
+            even_positions = self._create_even_grid(num_mobile_users, region_size, template_mu.position[2])
+            mobile_users = MobileUser.clone_at_positions(template_mu, even_positions)
         
         # Create aerial base stations
         if optimization_method == 'stochastic':
@@ -210,7 +259,8 @@ class UAVPlacementOptimizer:
             raise ValueError("No simulation results available. Run optimize() first.")
         
         region_size = self.results['parameters']['region_size_km']
-        return self.simulator.plot_results(region_size=region_size, save_path=save_path)
+        optimization_method = self.results['optimization_method']
+        return self.simulator.plot_results(region_size=region_size, save_path=save_path, optimization_method=optimization_method)
     
     @classmethod
     def quick_optimize(
