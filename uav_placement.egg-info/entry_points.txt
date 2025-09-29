@@ -1,2 +1,0 @@
-[console_scripts]
-uav-placement = uav_placement.cli:main

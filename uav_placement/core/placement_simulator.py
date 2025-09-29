@@ -208,7 +208,7 @@ class PlacementSimulator:
         Returns:
             Matplotlib figure object
         """
-        if not self.position_history:
+        if len(self.position_history) == 0:
             raise ValueError("No simulation results to plot. Run generate_sample_path() first.")
         
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
