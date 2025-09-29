@@ -2,28 +2,139 @@
 
 # Non-cooperative Aerial Base Station Placement via Stochastic Optimization
 
-This repository contains Python implementations of algorithms for optimizing the placement of aerial base stations (UAVs) to maximize utility for mobile users in a non-cooperative setting.
+This repository contains both MATLAB and Python implementations of algorithms for optimizing the placement of aerial base stations (UAVs) to maximize utility for mobile users in a non-cooperative setting.
 
 **Original Paper:** ["Non-cooperative Aerial Base Station Placement via Stochastic Optimization"](https://arxiv.org/abs/1905.03988) by Daniel Romero and Geert Leus.
 
 **Video:** https://www.youtube.com/watch?v=ZNQiVQ3TtGI
 
-## Features
+## Repository Structure
 
-- **Python Implementation**: Converted from MATLAB with simplified, modern Python code
+This repository is organized into two main implementations:
+
+### 📁 `matlab/` - Original MATLAB Implementation
+The reference implementation containing the original research code and experimental framework.
+
+- Complete MATLAB codebase with all original experiments
+- Comprehensive experimental scenarios (1D and 2D placement)
+- Advanced visualization and analysis tools
+- Suitable for research and algorithm development
+
+### 📁 `python/` - Modern Python Implementation  
+A complete Python conversion with simplified APIs for external program integration.
+
+- Clean, modern Python interface
+- No MATLAB dependencies (uses NumPy, SciPy, matplotlib)
+- Command-line interface for easy integration
+- Simplified API for external programs
+- Comprehensive testing and documentation
+
+## Quick Start
+
+### Python Implementation (Recommended for Integration)
+
+```bash
+# Navigate to Python implementation
+cd python
+
+# Install dependencies
+pip install -r requirements.txt
+pip install -e .
+
+# Run example
+python example.py
+```
+
+### MATLAB Implementation (Original Research Code)
+
+```matlab
+% Navigate to MATLAB implementation
+cd matlab
+
+% Initialize and run
+gsimStartup
+gsim(0)  % Run default experiment
+```
+
+## Which Implementation to Use?
+
+**Choose Python if you:**
+- Want to integrate UAV placement optimization into external programs
+- Prefer modern, clean APIs and CLI interfaces
+- Need to avoid MATLAB dependencies
+- Want comprehensive testing and documentation
+
+**Choose MATLAB if you:**
+- Are conducting research and need the complete experimental framework
+- Want to reproduce exact results from the original paper
+- Need access to all original experiments and analysis tools
+- Are familiar with the MATLAB ecosystem
+
+## Algorithm Overview
+
+Both implementations provide the same core algorithms for non-cooperative optimization where each aerial base station independently optimizes its position based on utility feedback from mobile users.
+
+### Key Features
+
 - **Multiple Optimization Methods**: Stochastic gradient descent and k-means-based approaches
-- **Flexible Utility Functions**: Sigmoid and leaky ReLU utility functions
+- **Flexible Utility Functions**: Sigmoid and leaky ReLU utility functions  
 - **Realistic Channel Models**: Free space propagation with configurable parameters
-- **Easy-to-Use API**: Simple interface for external programs
-- **Command-Line Interface**: Run optimizations from the command line
 - **Visualization**: Built-in plotting and result visualization
 
-## Installation
+### Key Components
+
+- **Mobile Users**: Entities with utility functions based on received signal power
+- **Aerial Base Stations**: Flying base stations that can adjust their positions
+- **Channel Models**: Communication channel models (free space propagation)
+- **Placement Simulator**: Orchestrates the optimization process
+
+## Examples
+
+### Python API
+
+```python
+from uav_placement import UAVPlacementOptimizer
+
+# Simple optimization
+results = UAVPlacementOptimizer.quick_optimize(
+    num_base_stations=3,
+    num_mobile_users=50
+)
+
+print(f"Final utility: {results['results']['final_utility']}")
+print("Optimal positions:", results['results']['final_bs_positions'])
+```
+
+### MATLAB Experiments
+
+```matlab
+% Run 2D stochastic optimization  
+gsim(0, 2008, 100)
+
+% Compare optimization methods
+gsim(0, 2010, 50)
+```
+
+### Command Line Interface (Python)
+
+```bash
+# Basic optimization
+uav-placement --num-bs 3 --num-users 50 --iterations 100
+
+# Advanced configuration with output files
+uav-placement --method stochastic --utility sigmoid \
+    --step-size 0.01 --batch-size 20 \
+    --output results.json --plot optimization.png
+```
+
+## Installation and Setup
+
+### Python Implementation
 
 ```bash
 # Clone the repository
 git clone https://github.com/SpontaneousDuck/non_cooperative_aerial_base_station_placement.git
-cd non_cooperative_aerial_base_station_placement
+cd non_cooperative_aerial_base_station_placement/python
 
 # Install dependencies
 pip install -r requirements.txt
@@ -32,97 +143,20 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## Quick Start
+### MATLAB Implementation
 
-### Python API
+```matlab
+% Clone and navigate to MATLAB directory
+cd non_cooperative_aerial_base_station_placement/matlab
 
-```python
-from uav_placement import UAVPlacementOptimizer
-
-# Simple optimization
-optimizer = UAVPlacementOptimizer()
-results = optimizer.optimize(
-    num_base_stations=3,
-    num_mobile_users=50,
-    region_size=7.0,
-    num_iterations=100
-)
-
-print(f"Final utility: {results['results']['final_utility']}")
-print("Optimal positions:", results['results']['final_bs_positions'])
-
-# Save results and plot
-optimizer.save_results('results.json')
-optimizer.plot_results(save_path='optimization.png')
+% Run initialization
+gsimStartup
 ```
 
-### Command Line Interface
+## Documentation
 
-```bash
-# Basic optimization
-uav-placement --num-bs 3 --num-users 50 --iterations 100
-
-# Advanced parameters
-uav-placement --num-bs 5 --num-users 100 --method stochastic \
-    --utility sigmoid --step-size 2.0 --batch-size 20 \
-    --output results.json --plot optimization.png
-
-# K-means optimization
-uav-placement --num-bs 3 --num-users 50 --method kmeans \
-    --iterations 50 --output kmeans_results.json
-```
-
-## Algorithm Overview
-
-The package implements non-cooperative optimization where each aerial base station independently optimizes its position based on utility feedback from mobile users. Two main approaches are supported:
-
-1. **Stochastic Gradient Descent**: Base stations use gradients of user utility functions to update positions
-2. **K-means Clustering**: Base stations move toward centroids of users they serve
-
-### Key Components
-
-- **Mobile Users**: Entities with utility functions based on received signal power
-- **Aerial Base Stations**: Flying base stations that can adjust their positions
-- **Channel Model**: Free space propagation with realistic parameters
-- **Placement Simulator**: Orchestrates the optimization process
-
-## Examples
-
-See `example.py` for a complete usage example:
-
-```bash
-python example.py
-```
-
-## API Reference
-
-### Main Classes
-
-- `UAVPlacementOptimizer`: High-level interface for optimization
-- `MobileUser`: Represents mobile users with utility functions
-- `AerialBaseStation`: Base class for aerial base stations
-- `StochasticAerialBaseStation`: Gradient-based base station
-- `KmeansAerialBaseStation`: K-means-based base station
-- `Channel`: Communication channel models
-- `PlacementSimulator`: Main simulation engine
-
-### Key Parameters
-
-- `num_base_stations`: Number of aerial base stations
-- `num_mobile_users`: Number of mobile users in the region
-- `region_size`: Size of the square deployment region (km)
-- `optimization_method`: 'stochastic' or 'kmeans'
-- `utility_function`: 'sigmoid' or 'leakyRelu'
-- `num_iterations`: Number of optimization steps
-- `step_size`: Learning rate for gradient descent
-
-## Testing
-
-Run the test suite:
-
-```bash
-pytest uav_placement/tests/
-```
+- **[Python Implementation Guide](python/README.md)** - Detailed Python API documentation
+- **[MATLAB Implementation Guide](matlab/README.md)** - Original MATLAB research code documentation
 
 ## Citation
 
