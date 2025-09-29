@@ -1,0 +1,43 @@
+[project]
+name = "uav_placement"
+description = "Non-cooperative Aerial Base Station Placement via Stochastic Optimization"
+version = "0.1.0"
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64"]
+
+[dependencies]
+python = ">=3.8,<3.13"
+numpy = ">=1.20"
+scipy = ">=1.7"
+matplotlib = ">=3.3"
+scikit-learn = ">=1.0"
+pip = "*"
+ipykernel = "*"
+
+# Development-only tools
+[feature.dev.dependencies]
+pytest = ">=6"
+pytest-cov = ">=2"
+black = ">=21"
+flake8 = ">=3.8"
+
+# Install this local package in editable mode (pip-style)
+[feature.pkg.pypi-dependencies]
+uav_placement = { path = ".", editable = true }
+
+# Make the default environment include dev tools and the local package
+[environments]
+default = { features = ["dev", "pkg"] }
+
+[tasks]
+# Run unit tests
+"test" = "pytest -q"
+# Run tests with coverage
+"test-cov" = "pytest -q --cov=uav_placement --cov-report=term-missing"
+# Lint and format
+"lint" = "flake8 uav_placement"
+"format" = "black ."
+# Example runner from this folder
+"run-example" = "python examples/example.py"
+# CLI entrypoint (module form to avoid requiring console_scripts installation)
+"run-cli" = "python -m uav_placement.cli --help"

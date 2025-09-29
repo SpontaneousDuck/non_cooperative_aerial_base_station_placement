@@ -46,14 +46,5 @@ results.json
 *.avi
 *.gif
 
-# Python implementation specific  
-python/optimization_*.png
-python/optimization_*.json
-python/results.json
-
-# MATLAB implementation specific
-matlab/*.avi
-matlab/*.gif
-
 # Temporary files
 /tmp/

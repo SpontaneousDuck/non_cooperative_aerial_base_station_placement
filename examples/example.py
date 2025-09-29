@@ -1,6 +1,5 @@
 """Example usage of the UAV placement optimization package."""
 
-import numpy as np
 from uav_placement import UAVPlacementOptimizer
 
 def main():
